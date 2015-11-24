@@ -20,9 +20,12 @@ describe('StatsDClient', function () {
     var s, c;
 
     before(function (done) {
-        s = new FakeServer();
+        s = new FakeServer({
+            port: 18127
+        });
         c = new StatsDClient({
-            maxBufferSize: 0
+            maxBufferSize: 0,
+            defaultAddHostname: false,
         });
         s.start(done);
     });
@@ -48,17 +51,17 @@ describe('StatsDClient', function () {
         });
 
         it('.increment("abc", 10) → "abc:10|c', function (done) {
-            c.increment('abc', 10);
+            c.increment('abc', {delta: 10});
             s.expectMessage('abc:10|c', done);
         });
 
         it('.decrement("abc", -2) → "abc:-2|c', function (done) {
-            c.decrement('abc', -2);
+            c.decrement('abc', {delta: -2});
             s.expectMessage('abc:-2|c', done);
         });
 
         it('.decrement("abc", 3) → "abc:-3|c', function (done) {
-            c.decrement('abc', -3);
+            c.decrement('abc', {delta: -3});
             s.expectMessage('abc:-3|c', done);
         });
     });
@@ -122,64 +125,27 @@ describe('StatsDClient', function () {
         });
     });
 
-    describe('Chaining', function() {
-      it('.gauge() chains', function() {
-        assert.equal(c, c.gauge('x', 'y'));
-      });
-
-      it('.gaugeDelta() chains', function() {
-        assert.equal(c, c.gaugeDelta('x', 'y'));
-      });
-
-      it('.set() chains', function() {
-        assert.equal(c, c.set('x', 'y'));
-      });
-
-      it('.counter() chains', function() {
-        assert.equal(c, c.counter('x', 'y'));
-      });
-
-      it('.increment() chains', function() {
-        assert.equal(c, c.increment('x', 'y'));
-      });
-
-      it('.decrement() chains', function() {
-        assert.equal(c, c.decrement('x', 'y'));
-      });
-
-      it('.timing() chains', function() {
-        assert.equal(c, c.timing('x', 'y'));
-      });
-
-      it('.histogram() chains', function() {
-        assert.equal(c, c.histogram('x', 'y'));
-      });
-
-      it('.close() chains', function() {
-        assert.equal(c, c.close('x', 'y'));
-      });
-    });
 });
 
 describe('StatsDClient / HTTP', function () {
     it('Giving plain host=example.com gives UDP backend', function () {
         assert.instanceOf(
-            (new StatsDClient({ host: 'example.com' }))._socket,
+            (new StatsDClient({ instance: 'example.com' })).getSocketForData({}),
             EphemeralSocket
         );
     });
 
     it('Giving host=https://example.com gives HTTP backend', function () {
         var c = new StatsDClient({
-            host: 'https://example.com'
+            instance: 'https://example.com'
         });
 
-        assert.instanceOf(c._socket, HttpSocket);
+        assert.instanceOf(c.getSocketForData({}), HttpSocket);
     });
 
     it('Giving host=http://example.com gives HTTP backend', function () {
         assert.instanceOf(
-            (new StatsDClient({ host: 'http://example.com' }))._socket,
+            (new StatsDClient({ instance: 'http://example.com' })).getSocketForData({}),
             HttpSocket
         );
     });
